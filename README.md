@@ -25,6 +25,8 @@ make run
 
 The app listens on `:8080` by default.
 
+For dev deployments backed by managed Postgres, set `DATABASE_URL` instead of the individual `DB_*` fields. The app uses `DATABASE_URL` for both runtime connections and migrations.
+
 ## Common Commands
 
 ```bash
@@ -72,6 +74,7 @@ The repository includes [.env.example](.env.example) with the standard local set
 - `APP_ENV`
 - `PORT`
 - `FRONTEND_BASE_URL`
+- `DATABASE_URL`
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL_MODE`
 - `JWT_SECRET`, `JWT_EXPIRY_HOURS`
 - `SESSION_TTL_HOURS`

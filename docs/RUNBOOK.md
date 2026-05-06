@@ -4,15 +4,18 @@ Practical pilot runbook for a single-instance deployment.
 
 ## Production Environment
 
-Set these before launch:
+Set these before launch in dev or preview environments:
 
 - `APP_ENV=production`
 - `FRONTEND_BASE_URL=https://<frontend-host>`
 - `JWT_SECRET=<strong random secret>`
 - `SESSION_TTL_HOURS=8`
+- `DATABASE_URL=postgresql://...`
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL_MODE`
 - R2 variables if image uploads are enabled
 - `MIGRATE_PATH=file://migrations`
+
+Use `DATABASE_URL` for hosted Postgres providers when available. The app will fall back to the `DB_*` variables for local Docker Compose and self-managed setups.
 
 Use `GIN_MODE=release` in the runtime environment. Do not reuse staging or development secrets.
 

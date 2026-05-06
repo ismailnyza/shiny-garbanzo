@@ -33,6 +33,44 @@ func TestLoadRejectsDisabledProductionDBSSL(t *testing.T) {
 	}
 }
 
+func TestLoadUsesDatabaseURLInProduction(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("JWT_SECRET", "0123456789abcdef0123456789abcdef")
+	t.Setenv("DATABASE_URL", "postgresql://app:p%40ss%20word@db.example.com:5432/qr_restaurant")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected DATABASE_URL to load, got %v", err)
+	}
+
+	if got := cfg.DatabaseDSN(); !strings.HasPrefix(got, "postgres://app:") {
+		t.Fatalf("expected normalized postgres URL, got %q", got)
+	}
+	if !strings.Contains(cfg.DatabaseDSN(), "sslmode=require") {
+		t.Fatalf("expected production DATABASE_URL to default to sslmode=require, got %q", cfg.DatabaseDSN())
+	}
+	if got := cfg.MigrationDatabaseURL(); got != cfg.DatabaseDSN() {
+		t.Fatalf("expected migration URL to match database DSN, got %q and %q", got, cfg.DatabaseDSN())
+	}
+}
+
+func TestLoadUsesDatabaseURLInDevelopmentWithoutForcingSSL(t *testing.T) {
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("DATABASE_URL", "postgresql://app:p%40ss%20word@db.example.com:5432/qr_restaurant")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected DATABASE_URL to load, got %v", err)
+	}
+
+	if strings.Contains(cfg.DatabaseDSN(), "sslmode=require") {
+		t.Fatalf("expected development DATABASE_URL to avoid forcing sslmode=require, got %q", cfg.DatabaseDSN())
+	}
+	if got := cfg.MigrationDatabaseURL(); got != cfg.DatabaseDSN() {
+		t.Fatalf("expected migration URL to match database DSN, got %q and %q", got, cfg.DatabaseDSN())
+	}
+}
+
 func TestMigrationDatabaseURLUsesPostgresURL(t *testing.T) {
 	cfg := &Config{
 		DBHost:     "db.example.com",

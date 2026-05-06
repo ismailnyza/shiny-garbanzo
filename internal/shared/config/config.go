@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,12 +15,13 @@ type Config struct {
 	Port            string
 	FrontendBaseURL string
 
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBSSLMode  string
+	DatabaseURL string
+	DBHost      string
+	DBPort      string
+	DBUser      string
+	DBPassword  string
+	DBName      string
+	DBSSLMode   string
 
 	JWTSecret      string
 	JWTExpiryHours int
@@ -47,12 +49,13 @@ func Load() (*Config, error) {
 		Port:            getEnv("PORT", "8080"),
 		FrontendBaseURL: getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
 
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "postgres"),
-		DBName:     getEnv("DB_NAME", "qr_restaurant"),
-		DBSSLMode:  getEnv("DB_SSL_MODE", "disable"),
+		DatabaseURL: getEnv("DATABASE_URL", ""),
+		DBHost:      getEnv("DB_HOST", "localhost"),
+		DBPort:      getEnv("DB_PORT", "5432"),
+		DBUser:      getEnv("DB_USER", "postgres"),
+		DBPassword:  getEnv("DB_PASSWORD", "postgres"),
+		DBName:      getEnv("DB_NAME", "qr_restaurant"),
+		DBSSLMode:   getEnv("DB_SSL_MODE", "disable"),
 
 		JWTSecret:      getEnv("JWT_SECRET", "change-me"),
 		JWTExpiryHours: getEnvInt("JWT_EXPIRY_HOURS", 24),
@@ -76,11 +79,19 @@ func Load() (*Config, error) {
 	}
 	cfg.BCryptCost = cost
 
+	if cfg.DatabaseURL != "" {
+		normalized, err := normalizeDatabaseURL(cfg.DatabaseURL, cfg.AppEnv)
+		if err != nil {
+			return nil, err
+		}
+		cfg.DatabaseURL = normalized
+	}
+
 	if cfg.AppEnv == "production" {
 		if cfg.JWTSecret == "" || cfg.JWTSecret == "change-me" || cfg.JWTSecret == "your-256-bit-secret-here-change-in-production" || len(cfg.JWTSecret) < 32 {
 			return nil, fmt.Errorf("JWT_SECRET must be set to a non-placeholder value of at least 32 characters in production")
 		}
-		if cfg.DBSSLMode == "disable" {
+		if cfg.DatabaseURL == "" && cfg.DBSSLMode == "disable" {
 			return nil, fmt.Errorf("DB_SSL_MODE must not be disabled in production")
 		}
 	}
@@ -109,6 +120,9 @@ func getEnvInt(key string, fallback int) int {
 }
 
 func (c *Config) DatabaseDSN() string {
+	if c.DatabaseURL != "" {
+		return c.DatabaseURL
+	}
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName, c.DBSSLMode,
@@ -116,6 +130,9 @@ func (c *Config) DatabaseDSN() string {
 }
 
 func (c *Config) MigrationDatabaseURL() string {
+	if c.DatabaseURL != "" {
+		return c.DatabaseURL
+	}
 	u := &url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(c.DBUser, c.DBPassword),
@@ -126,4 +143,28 @@ func (c *Config) MigrationDatabaseURL() string {
 	q.Set("sslmode", c.DBSSLMode)
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+func normalizeDatabaseURL(raw string, appEnv string) (string, error) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("DATABASE_URL is invalid: %w", err)
+	}
+
+	switch parsed.Scheme {
+	case "postgres", "postgresql":
+		parsed.Scheme = "postgres"
+	default:
+		return "", fmt.Errorf("DATABASE_URL must use postgres or postgresql scheme, got %q", parsed.Scheme)
+	}
+
+	if appEnv == "production" {
+		q := parsed.Query()
+		if strings.EqualFold(q.Get("sslmode"), "") {
+			q.Set("sslmode", "require")
+			parsed.RawQuery = q.Encode()
+		}
+	}
+
+	return parsed.String(), nil
 }

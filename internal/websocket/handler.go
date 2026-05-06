@@ -30,10 +30,11 @@ type Handler struct {
 	hub             *Hub
 	db              *gorm.DB
 	frontendBaseURL string
+	appEnv          string
 }
 
-func NewWSHandler(hub *Hub, db *gorm.DB, frontendBaseURL string) *Handler {
-	return &Handler{hub: hub, db: db, frontendBaseURL: frontendBaseURL}
+func NewWSHandler(hub *Hub, db *gorm.DB, frontendBaseURL, appEnv string) *Handler {
+	return &Handler{hub: hub, db: db, frontendBaseURL: frontendBaseURL, appEnv: appEnv}
 }
 
 func (h *Handler) ServeWS(c *gin.Context) {
@@ -83,6 +84,9 @@ func (h *Handler) ServeWS(c *gin.Context) {
 }
 
 func (h *Handler) checkOrigin(r *http.Request) bool {
+	if h.appEnv != "production" {
+		return true
+	}
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return false

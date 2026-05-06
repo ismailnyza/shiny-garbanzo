@@ -48,7 +48,7 @@ func NewRouter(cfg *config.Config, db *gorm.DB, storageClient *storage.Client) *
 	orderBroadcaster := &orderBroadcaster{hub: wsHub}
 	sessionSvc := session.NewService(sessionRepo, tableRepo, restaurantRepo, sessionOrderRepo, cfg.SessionTTLHours)
 	orderSvc := order.NewService(sessionOrderRepo, sessionRepo, menuRepo, orderBroadcaster)
-	wsHandler := websocket.NewWSHandler(wsHub, db, cfg.FrontendBaseURL)
+	wsHandler := websocket.NewWSHandler(wsHub, db, cfg.FrontendBaseURL, cfg.AppEnv)
 
 	authHandler := auth.NewHandler(authSvc, cfg)
 	restaurantHandler := restaurant.NewHandler(restaurantSvc)
@@ -67,11 +67,16 @@ func NewRouter(cfg *config.Config, db *gorm.DB, storageClient *storage.Client) *
 	r.Use(middleware.Logger())
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{cfg.FrontendBaseURL}
+	if cfg.AppEnv == "production" {
+		corsConfig.AllowOrigins = []string{cfg.FrontendBaseURL}
+		corsConfig.AllowCredentials = true
+	} else {
+		corsConfig.AllowAllOrigins = true
+		corsConfig.AllowCredentials = false
+	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-Request-ID"}
 	corsConfig.ExposeHeaders = []string{"Content-Length", "X-Request-ID"}
-	corsConfig.AllowCredentials = true
 	corsConfig.MaxAge = 12 * time.Hour
 	r.Use(cors.New(corsConfig))
 
