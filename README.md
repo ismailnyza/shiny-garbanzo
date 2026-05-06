@@ -84,11 +84,25 @@ The repository includes [.env.example](.env.example) with the standard local set
 
 - `GET /api/v1/health` checks the app and database.
 - `GET /metrics` exposes request, order, WebSocket, panic, rate-limit, and DB pool metrics.
+- `GET /docs` opens the Swagger UI.
+- `GET /docs/openapi.yaml` serves the raw OpenAPI document.
 - `make seed` loads `scripts/seed.sql`.
 - `make lint` runs `golangci-lint`.
 
 See [docs/RUNBOOK.md](docs/RUNBOOK.md) for deployment, rollback, backup/restore, migration recovery, and secret rotation.
 See [docs/PLAN.md](docs/PLAN.md) for the broader product and schema notes.
+
+## Frontend Handoff
+
+The frontend developer needs:
+
+- `FRONTEND_BASE_URL` pointed at the frontend origin so CORS accepts the browser app.
+- The Swagger UI at `/docs` and the OpenAPI spec at `/docs/openapi.yaml`.
+- A backend base URL for local dev, usually `http://localhost:8080`.
+- JWT auth flow details from `/api/v1/auth/login` and `/api/v1/auth/me`.
+- The WebSocket endpoint `/ws/sessions/{sessionToken}` and the `order_updated` message type.
+- Seed or test data for owner, restaurant, table, and menu flows so the UI can be built against real payloads.
+- The standard response envelope: `success`, `request_id`, `data`, `error`, and `meta`.
 
 ## Product Notes
 

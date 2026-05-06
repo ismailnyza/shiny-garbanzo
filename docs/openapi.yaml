@@ -1,0 +1,1682 @@
+openapi: 3.0.3
+info:
+  title: QR Restaurant API
+  version: 1.0.0
+  description: QR-based dine-in restaurant ordering backend.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+  - name: Restaurants
+  - name: Tables
+  - name: Theme
+  - name: Menu
+  - name: Sessions
+  - name: Orders
+  - name: Upload
+  - name: Public
+  - name: Realtime
+paths:
+  /api/v1/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  db:
+                    type: string
+                    example: ok
+  /metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus-style metrics
+      responses:
+        "200":
+          description: Metrics text
+          content:
+            text/plain:
+              schema:
+                type: string
+  /ws/sessions/{sessionToken}:
+    get:
+      tags: [Realtime]
+      summary: WebSocket for live order updates
+      parameters:
+        - in: path
+          name: sessionToken
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "101":
+          description: Switching protocols
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a staff or owner account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/UserEnvelope"
+        "400":
+          $ref: "#/components/responses/ErrorEnvelope"
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in and get a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthEnvelope"
+        "400":
+          $ref: "#/components/responses/ErrorEnvelope"
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/UserEnvelope"
+        "401":
+          $ref: "#/components/responses/ErrorEnvelope"
+  /api/v1/restaurants:
+    get:
+      tags: [Restaurants]
+      summary: List restaurants owned by the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/RestaurantListEnvelope"
+    post:
+      tags: [Restaurants]
+      summary: Create a restaurant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRestaurantRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/RestaurantEnvelope"
+  /api/v1/restaurants/{restaurantId}:
+    get:
+      tags: [Restaurants]
+      summary: Get a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/RestaurantEnvelope"
+    patch:
+      tags: [Restaurants]
+      summary: Update a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRestaurantRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/RestaurantEnvelope"
+    delete:
+      tags: [Restaurants]
+      summary: Delete a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "204":
+          description: No content
+  /api/v1/restaurants/{restaurantId}/theme:
+    get:
+      tags: [Theme]
+      summary: Get restaurant theme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ThemeEnvelope"
+    put:
+      tags: [Theme]
+      summary: Upsert restaurant theme
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThemeUpsertRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ThemeEnvelope"
+  /api/v1/restaurants/{restaurantId}/staff:
+    get:
+      tags: [Restaurants]
+      summary: List staff for a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/UserListEnvelope"
+    post:
+      tags: [Restaurants]
+      summary: Create staff for a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/UserEnvelope"
+  /api/v1/restaurants/{restaurantId}/tables:
+    get:
+      tags: [Tables]
+      summary: List tables
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/TableListEnvelope"
+    post:
+      tags: [Tables]
+      summary: Create a table
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTableRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/TableEnvelope"
+  /api/v1/restaurants/{restaurantId}/tables/{tableId}:
+    patch:
+      tags: [Tables]
+      summary: Update a table
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/TableId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTableRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/TableEnvelope"
+    delete:
+      tags: [Tables]
+      summary: Delete a table
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/TableId"
+      responses:
+        "204":
+          description: No content
+  /api/v1/restaurants/{restaurantId}/tables/{tableId}/regenerate-qr:
+    post:
+      tags: [Tables]
+      summary: Regenerate a table QR token
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/TableId"
+      responses:
+        "200":
+          $ref: "#/components/responses/QRRegenEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/categories:
+    get:
+      tags: [Menu]
+      summary: List menu categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CategoryListEnvelope"
+    post:
+      tags: [Menu]
+      summary: Create a menu category
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/CategoryEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/categories/{categoryId}:
+    patch:
+      tags: [Menu]
+      summary: Update a menu category
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/CategoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/CategoryEnvelope"
+    delete:
+      tags: [Menu]
+      summary: Delete a menu category
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/CategoryId"
+      responses:
+        "204":
+          description: No content
+  /api/v1/restaurants/{restaurantId}/menu/categories/reorder:
+    put:
+      tags: [Menu]
+      summary: Reorder categories
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ReorderEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/categories/{categoryId}/items:
+    get:
+      tags: [Menu]
+      summary: List items for a category
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/CategoryId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ItemListEnvelope"
+    post:
+      tags: [Menu]
+      summary: Create a menu item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/CategoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateItemRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ItemEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/categories/{categoryId}/items/reorder:
+    put:
+      tags: [Menu]
+      summary: Reorder items within a category
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/CategoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ReorderEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/items:
+    get:
+      tags: [Menu]
+      summary: List all items
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ItemListEnvelope"
+  /api/v1/restaurants/{restaurantId}/menu/items/{itemId}:
+    patch:
+      tags: [Menu]
+      summary: Update a menu item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateItemRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ItemEnvelope"
+    delete:
+      tags: [Menu]
+      summary: Delete a menu item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/ItemId"
+      responses:
+        "204":
+          description: No content
+  /api/v1/restaurants/{restaurantId}/sessions:
+    get:
+      tags: [Sessions]
+      summary: List sessions for a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionListEnvelope"
+  /api/v1/restaurants/{restaurantId}/sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Get a session
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionDetailEnvelope"
+  /api/v1/restaurants/{restaurantId}/sessions/{sessionId}/close:
+    post:
+      tags: [Sessions]
+      summary: Close a session
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseSessionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionCloseEnvelope"
+  /api/v1/restaurants/{restaurantId}/sessions/{sessionId}/payment:
+    patch:
+      tags: [Sessions]
+      summary: Update payment status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePaymentRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/SessionPaymentEnvelope"
+  /api/v1/restaurants/{restaurantId}/orders:
+    get:
+      tags: [Orders]
+      summary: List orders for a restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+      responses:
+        "200":
+          $ref: "#/components/responses/OrderListEnvelope"
+  /api/v1/restaurants/{restaurantId}/orders/{orderId}:
+    get:
+      tags: [Orders]
+      summary: Get an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          $ref: "#/components/responses/OrderEnvelope"
+  /api/v1/restaurants/{restaurantId}/orders/{orderId}/status:
+    patch:
+      tags: [Orders]
+      summary: Update order status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RestaurantId"
+        - $ref: "#/components/parameters/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/OrderStatusEnvelope"
+  /api/v1/upload/image:
+    post:
+      tags: [Upload]
+      summary: Upload a restaurant asset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                context:
+                  type: string
+                  enum: [logo, banner, menu_item]
+      responses:
+        "201":
+          $ref: "#/components/responses/UploadEnvelope"
+  /api/v1/public/scan:
+    get:
+      tags: [Public]
+      summary: Start or reuse a table session from a QR token
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ScanEnvelope"
+  /api/v1/public/sessions/{sessionToken}:
+    get:
+      tags: [Public]
+      summary: Get public session status
+      parameters:
+        - $ref: "#/components/parameters/SessionToken"
+      responses:
+        "200":
+          $ref: "#/components/responses/PublicSessionEnvelope"
+  /api/v1/public/sessions/{sessionToken}/menu:
+    get:
+      tags: [Public]
+      summary: Get the customer menu view
+      parameters:
+        - $ref: "#/components/parameters/SessionToken"
+      responses:
+        "200":
+          $ref: "#/components/responses/PublicMenuEnvelope"
+  /api/v1/public/sessions/{sessionToken}/orders:
+    get:
+      tags: [Public]
+      summary: List customer orders
+      parameters:
+        - $ref: "#/components/parameters/SessionToken"
+      responses:
+        "200":
+          $ref: "#/components/responses/OrderListEnvelope"
+    post:
+      tags: [Public]
+      summary: Place a customer order
+      parameters:
+        - $ref: "#/components/parameters/SessionToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceOrderRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/OrderEnvelope"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RestaurantId:
+      in: path
+      name: restaurantId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TableId:
+      in: path
+      name: tableId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CategoryId:
+      in: path
+      name: categoryId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ItemId:
+      in: path
+      name: itemId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionToken:
+      in: path
+      name: sessionToken
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      in: path
+      name: orderId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    ErrorEnvelope:
+      description: Error envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    UserEnvelope:
+      description: Single user envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UserEnvelope"
+    UserListEnvelope:
+      description: Staff list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UserListEnvelope"
+    AuthEnvelope:
+      description: Login envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthEnvelope"
+    RestaurantEnvelope:
+      description: Restaurant envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RestaurantEnvelope"
+    RestaurantListEnvelope:
+      description: Restaurant list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RestaurantListEnvelope"
+    ThemeEnvelope:
+      description: Theme envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ThemeEnvelope"
+    TableEnvelope:
+      description: Table envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TableEnvelope"
+    TableListEnvelope:
+      description: Table list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TableListEnvelope"
+    QRRegenEnvelope:
+      description: QR regeneration envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/QRRegenEnvelope"
+    CategoryEnvelope:
+      description: Category envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CategoryEnvelope"
+    CategoryListEnvelope:
+      description: Category list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CategoryListEnvelope"
+    ReorderEnvelope:
+      description: Reorder result
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReorderEnvelope"
+    ItemEnvelope:
+      description: Item envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ItemEnvelope"
+    ItemListEnvelope:
+      description: Item list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ItemListEnvelope"
+    SessionListEnvelope:
+      description: Session list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionListEnvelope"
+    SessionDetailEnvelope:
+      description: Session detail envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionDetailEnvelope"
+    SessionCloseEnvelope:
+      description: Session close envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionCloseEnvelope"
+    SessionPaymentEnvelope:
+      description: Session payment envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SessionPaymentEnvelope"
+    OrderListEnvelope:
+      description: Order list envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OrderListEnvelope"
+    OrderEnvelope:
+      description: Order envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OrderEnvelope"
+    OrderStatusEnvelope:
+      description: Order status envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OrderStatusEnvelope"
+    UploadEnvelope:
+      description: Upload response envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UploadEnvelope"
+    ScanEnvelope:
+      description: Scan response envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ScanEnvelope"
+    PublicSessionEnvelope:
+      description: Public session envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PublicSessionEnvelope"
+    PublicMenuEnvelope:
+      description: Public menu envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PublicMenuEnvelope"
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          nullable: true
+    Meta:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+          format: int64
+    BaseEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        request_id:
+          type: string
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [OWNER, STAFF]
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                token_type:
+                  type: string
+                expires_in:
+                  type: integer
+                user:
+                  $ref: "#/components/schemas/UserResponse"
+    AuthEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/AuthResponse"
+    UserEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/UserResponse"
+    UserListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserResponse"
+    CreateRestaurantRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+    UpdateRestaurantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        theme:
+          $ref: "#/components/schemas/Theme"
+    RestaurantEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Restaurant"
+    RestaurantListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Restaurant"
+    ThemeUpsertRequest:
+      type: object
+      properties:
+        primary_color:
+          type: string
+          nullable: true
+        secondary_color:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        banner_url:
+          type: string
+          nullable: true
+        font_style:
+          type: string
+          nullable: true
+        dark_mode:
+          type: boolean
+          nullable: true
+    Theme:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        primary_color:
+          type: string
+        secondary_color:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        banner_url:
+          type: string
+          nullable: true
+        font_style:
+          type: string
+        dark_mode:
+          type: boolean
+    ThemeEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Theme"
+    CreateStaffRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    CreateTableRequest:
+      type: object
+      required: [table_code]
+      properties:
+        table_code:
+          type: string
+    UpdateTableRequest:
+      type: object
+      properties:
+        table_code:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        table_code:
+          type: string
+        qr_token:
+          type: string
+        qr_url:
+          type: string
+        is_active:
+          type: boolean
+        active_session_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    QRRegenEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                qr_token:
+                  type: string
+                qr_url:
+                  type: string
+    TableEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Table"
+    TableListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Table"
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        sort_order:
+          type: integer
+        is_visible:
+          type: boolean
+          nullable: true
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+        is_visible:
+          type: boolean
+          nullable: true
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sort_order:
+          type: integer
+        is_visible:
+          type: boolean
+        item_count:
+          type: integer
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    CategoryEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Category"
+    CategoryListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Category"
+    ReorderRequest:
+      type: object
+      required: [order]
+      properties:
+        order:
+          type: array
+          items:
+            type: object
+            required: [id, sort_order]
+            properties:
+              id:
+                type: string
+                format: uuid
+              sort_order:
+                type: integer
+    ReorderEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                updated:
+                  type: integer
+    CreateItemRequest:
+      type: object
+      required: [name, price_cents]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+        options_config:
+          type: object
+          nullable: true
+        is_available:
+          type: boolean
+          nullable: true
+        sort_order:
+          type: integer
+    UpdateItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+          nullable: true
+        options_config:
+          type: object
+          nullable: true
+        is_available:
+          type: boolean
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        price_cents:
+          type: integer
+        options_config:
+          type: object
+        is_available:
+          type: boolean
+        sort_order:
+          type: integer
+        category_name:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    ItemEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Item"
+    ItemListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Item"
+    ScanResponse:
+      type: object
+      properties:
+        session_token:
+          type: string
+          format: uuid
+        restaurant:
+          type: object
+          properties:
+            name:
+              type: string
+            slug:
+              type: string
+        table_code:
+          type: string
+        theme:
+          $ref: "#/components/schemas/Theme"
+    ScanEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ScanResponse"
+    PublicSessionResponse:
+      type: object
+      properties:
+        session_token:
+          type: string
+          format: uuid
+        status:
+          type: string
+        table_code:
+          type: string
+        started_at:
+          type: string
+    PublicSessionEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PublicSessionResponse"
+    PublicMenuResponse:
+      type: object
+      properties:
+        restaurant_name:
+          type: string
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              sort_order:
+                type: integer
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    description:
+                      type: string
+                      nullable: true
+                    image_url:
+                      type: string
+                      nullable: true
+                    price_cents:
+                      type: integer
+                    options_config:
+                      type: object
+                    is_available:
+                      type: boolean
+                    sort_order:
+                      type: integer
+    PublicMenuEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PublicMenuResponse"
+    CloseSessionRequest:
+      type: object
+      properties:
+        force:
+          type: boolean
+          nullable: true
+    UpdatePaymentRequest:
+      type: object
+      required: [payment_status]
+      properties:
+        payment_status:
+          type: string
+          enum: [PENDING, PARTIAL, PAID]
+    SessionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        total_cents:
+          type: integer
+        created_at:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              name_snapshot:
+                type: string
+              price_cents_snapshot:
+                type: integer
+              quantity:
+                type: integer
+    SessionListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        table_id:
+          type: string
+          format: uuid
+        table_code:
+          type: string
+        session_token:
+          type: string
+          format: uuid
+        status:
+          type: string
+        started_at:
+          type: string
+        closed_at:
+          type: string
+          nullable: true
+        order_count:
+          type: integer
+        pending_order_count:
+          type: integer
+    SessionListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionListItem"
+    SessionDetailEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                table_code:
+                  type: string
+                session_token:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                started_at:
+                  type: string
+                closed_at:
+                  type: string
+                  nullable: true
+                orders:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SessionSummary"
+    SessionCloseEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                closed_at:
+                  type: string
+    SessionPaymentEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                payment_status:
+                  type: string
+    PlaceOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        idempotency_key:
+          type: string
+          format: uuid
+          nullable: true
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [menu_item_id, quantity]
+            properties:
+              menu_item_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              selected_options:
+                type: object
+                additionalProperties: true
+        notes:
+          type: string
+          nullable: true
+    OrderItemResponse:
+      type: object
+      properties:
+        name_snapshot:
+          type: string
+        price_cents_snapshot:
+          type: integer
+        quantity:
+          type: integer
+        selected_options:
+          type: object
+          additionalProperties: true
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        idempotency_key:
+          type: string
+          nullable: true
+        status:
+          type: string
+        total_cents:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemResponse"
+    OrderEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Order"
+    OrderListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  table_code:
+                    type: string
+                  status:
+                    type: string
+                  total_cents:
+                    type: integer
+                  notes:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrderItemResponse"
+    UpdateStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED]
+    OrderStatusEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                updated_at:
+                  type: string
+    UploadEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                url:
+                  type: string
+                size_bytes:
+                  type: integer
+                mime_type:
+                  type: string
+    ErrorEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/BaseEnvelope"
+        - type: object
+          properties:
+            success:
+              type: boolean
+            error:
+              $ref: "#/components/schemas/ErrorBody"

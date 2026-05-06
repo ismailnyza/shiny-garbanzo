@@ -97,6 +97,18 @@ func NewRouter(cfg *config.Config, db *gorm.DB, storageClient *storage.Client) *
 		sqlDB, _ := db.DB()
 		metrics.Handler(sqlDB)(c)
 	})
+	r.GET("/docs", func(c *gin.Context) {
+		c.File("docs/swagger.html")
+	})
+	r.GET("/docs/swagger.html", func(c *gin.Context) {
+		c.File("docs/swagger.html")
+	})
+	r.GET("/docs/openapi.yaml", func(c *gin.Context) {
+		c.File("docs/openapi.yaml")
+	})
+	r.GET("/openapi.yaml", func(c *gin.Context) {
+		c.File("docs/openapi.yaml")
+	})
 
 	r.GET("/ws/sessions/:sessionToken", wsHandler.ServeWS)
 
