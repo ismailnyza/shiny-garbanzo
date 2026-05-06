@@ -1,0 +1,8 @@
+.git
+.agent-state
+.agents
+.codex
+bin
+tmp
+.env
+*.log

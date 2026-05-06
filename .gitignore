@@ -1,0 +1,17 @@
+.agent-state/
+.agents/
+.codex/
+.env
+.env.*
+!/.env.example
+bin/
+tmp/
+*.log
+*.out
+*.test
+*.prof
+coverage.out
+.DS_Store
+.idea/
+.vscode/
+*.swp
